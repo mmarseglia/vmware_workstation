@@ -90,14 +90,6 @@ class vmware_workstation (
     warning("VMware Workstation requires at least 2GB of memory. Memory ${::memorysize} reported.")
   }
 
-  validate_string($ensure)
-  validate_string($url)
-  validate_string($version)
-  validate_absolute_path($cache_dir)
-  validate_absolute_path($destination)
-  validate_string($filename)
-  validate_string($install_options)
-
   $source = "${url}${filename}"
 
   case $ensure {
