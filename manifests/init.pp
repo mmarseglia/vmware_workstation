@@ -88,21 +88,15 @@ class vmware_workstation (
     warning("VMware Workstation requires at least 2GB of memory. Memory ${::memorysize} reported.")
   }
 
-  if $serial_number == undef {
-    notify{ 'vmware_workstation::serial_number':
-      message => 'No serial number specified. VMware Workstation will expire after 30 days',
-    }
-    $serial_options=''
-  } else {
-    $serial_options="--set-setting vmware-workstation ${serial_number}"
-    # TODO: Windows option for this?
-  }
-
   # Dynamic variables must be determined here
   if $::kernel in 'Linux' {
     $real_filename = $filename ? {
       undef   => "VMware-Workstation-Full-${version}.x86_64.bundle",
       default => $filename
+    }
+    $serial_options = $serial_number ? {
+      undef   => '',
+      default => "--set-setting vmware-workstation serialNumber ${serial_number}",
     }
     $install_command = "/bin/sh ${destination}/${real_filename} ${install_options} ${serial_options}"
     $uninstall_command = '/usr/lib/vmware-installer -u vmware-workstation'
@@ -110,6 +104,10 @@ class vmware_workstation (
     $real_filename = $filename ? {
       undef   => "VMware-workstation-full-${version}.exe",
       default => $filename
+    }
+    $serial_options = $serial_number ? {
+      undef   => '',
+      default => "SERIALNUMBER=${serial_number}",
     }
     $install_command = "${destination}/${real_filename} ${install_options} ${serial_options}"
     # TODO: Windows uninstall command
