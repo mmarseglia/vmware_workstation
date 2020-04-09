@@ -68,16 +68,14 @@
 # Copyright 2015 Mike Marseglia, unless otherwise noted.
 #
 class vmware_workstation (
-  $ensure             = 'installed',
-  $serial_number      = UNDEF,
-  $url                = $::vmware_workstation::params::url,
-  $version            = $::vmware_workstation::params::version,
-  $cache_dir          = $::vmware_workstation::params::cache_dir,
-  $destination        = $::vmware_workstation::params::destination,
-  $filename           = $::vmware_workstation::params::filename,
-  $install_command    = $::vmware_workstation::params::install_command,
-  $install_options    = $::vmware_workstation::params::install_options,
-  $uninstall_command  = $::vmware_workstation::params::uninstall_command,
+  Enum['installed','absent']   $ensure             = 'installed',
+  Optional[String]             $serial_number      = undef,
+  Stdlib::Httpurl              $url                = $::vmware_workstation::params::url,
+  Pattern[/\d+\.\d+\.\d+-\d+/] $version            = $::vmware_workstation::params::version,
+  Stdlib::Absolutepath         $cache_dir          = $::vmware_workstation::params::cache_dir,
+  Stdlib::Absolutepath         $destination        = $::vmware_workstation::params::destination,
+  Optional[String]             $filename           = undef,
+  String                       $install_options    = $::vmware_workstation::params::install_options,
 ) inherits vmware_workstation::params {
 
   if ! ($::architecture in ['x86_64', 'amd64']) {
@@ -90,13 +88,40 @@ class vmware_workstation (
     warning("VMware Workstation requires at least 2GB of memory. Memory ${::memorysize} reported.")
   }
 
-  $source = "${url}${filename}"
+  # Dynamic variables must be determined here
+  if $::kernel in 'Linux' {
+    $real_filename = $filename ? {
+      undef   => "VMware-Workstation-Full-${version}.x86_64.bundle",
+      default => $filename
+    }
+    $serial_options = $serial_number ? {
+      undef   => '',
+      default => "--set-setting vmware-workstation serialNumber ${serial_number}",
+    }
+    $install_command = "/bin/sh ${destination}/${real_filename} ${install_options} ${serial_options}"
+    $uninstall_command = '/usr/lib/vmware-installer -u vmware-workstation'
+  } elsif $::kernel in 'Windows' {
+    $real_filename = $filename ? {
+      undef   => "VMware-workstation-full-${version}.exe",
+      default => $filename
+    }
+    $serial_options = $serial_number ? {
+      undef   => '',
+      default => "SERIALNUMBER=${serial_number}",
+    }
+    $install_command = "${destination}/${real_filename} ${install_options} ${serial_options}"
+    # TODO: Windows uninstall command
+    $uninstall_command = 'REM - NOT YET IMPLEMENTED - '
+    if $ensure == 'absent' { fail('UNINSTALL (ensure => absent) not currently supported on Windows') }
+  }
+
+  $source = "${url}${real_filename}"
 
   case $ensure {
     'installed' : {
       archive{ 'vmware_workstation':
         ensure  => present,
-        path    => "${destination}${filename}",
+        path    => "${destination}/${real_filename}",
         source  => $source,
         creates => '/usr/bin/vmware',
       }
