@@ -45,7 +45,7 @@ describe 'vmware_workstation' do
     it do
       expect {
         is_expected.to compile
-      }.to raise_error(%r{Action unknown. VMware Workstation can be installed or absent})
+      }.to raise_error(%r{Evaluation Error})
     end
   end
 end
